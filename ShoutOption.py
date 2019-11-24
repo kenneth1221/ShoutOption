@@ -9,6 +9,8 @@ import numpy as np
 import pandas as pd
 from pandas_datareader import data
 import datetime as dt
+import numpy.random as rd
+import matplotlib.pyplot as plt
 #%%
 def load_financial_data(name, output_file):
     try:
@@ -40,6 +42,54 @@ dailyvol = pastyears.std()
 yearlyvol = dailyvol*np.sqrt(daybasis)
 dailyalpha = pastyears.mean() + dailyvol**2/2
 yearlyalpha = dailyalpha*daybasis
+#%%
+Z1 = rd.randn(10000,1)
+Z2 = rd.randn(10000,1)
+
+sigma = yearlyvol
+T = 1
+trig = .5
+r = .0158
+d = .02
+S = SP500.iloc[-1].Close
+F = 10
+K = 3100
+
+def TriggerPayoff(Q):
+    Payoff = np.zeros((100,1))
+    
+    Shalf = S*np.exp( ( r - d - sigma**2/2)*trig + sigma*Z1 * np.sqrt(trig)) 
+    
+    S1 = Shalf*np.exp( ( r - d - sigma**2/2)*(T-trig) + sigma*Z2 * np.sqrt(T-trig)) 
+    Payoff = np.maximum(S1-K, 0)
+    Payoff[Shalf < Q] = F
+    meanPayoff = np.mean(Payoff)
+
+    return meanPayoff*np.exp(-r*T)
+
+def TwoPeriodEuroCall():
+    Shalf = S*np.exp( ( r - d - sigma**2/2)*trig + sigma*Z1 * np.sqrt(trig)) 
+    S1 = Shalf*np.exp( ( r - d - sigma**2/2)*(T-trig) + sigma*Z2 * np.sqrt(T-trig))
+    Payoff = np.maximum(S1-K,0)
+    return np.mean(Payoff)*np.exp(-r*T)
+
+#%%
+    
+payoffs = []
+eurocall = []
+strikes = []
+minrange = 50
+maxrange = 150
+step = .01
+#%%
+for i in np.arange(minrange,maxrange,step):
+    payoffs.append(TriggerPayoff(i))
+    eurocall.append(TwoPeriodEuroCall())
+    strikes.append(i)
+#%%
+plt.plot(np.arange(minrange,maxrange,step), payoffs)
+plt.plot(np.arange(minrange,maxrange,step), eurocall)
+print('value: ',max(payoffs), 'vanilla: ', max(eurocall), 'best Q level: ', strikes[payoffs.index(max(payoffs))])
 #%% testing code
 #a=SP500.index.shift(1, 'd')
 #
