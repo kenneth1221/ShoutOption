@@ -25,15 +25,25 @@ SP500 = load_financial_data('^GSPC', '^GSPC_data.pkl')
 def get_logreturn(yahoo_dataframe):
     out = pd.DataFrame(index = yahoo_dataframe.index)
     prices = yahoo_dataframe.Close
-    out['LogReturn'] = np.log(prices.shift(-1)/prices)
-    np.sqrt( (out.index.shift(1, 'd')-out.index).days )
+    days = pd.Series(yahoo_dataframe.index).dt.day
+    daydelta = days.iloc[1:].values - days.iloc[:-1].values
+    out['LogReturn'] = np.log(prices.shift(-1)/prices).dropna()/np.sqrt(daydelta)
     return out
 #%%
-get_logreturn(SP500)
+lreturns = get_logreturn(SP500)
 #%%
-a=SP500.index.shift(1, 'd')
+daybasis = 252
+n_years = 3
+pastyears = lreturns.iloc[-n_years*daybasis:]
+dailyvol = pastyears.std()
 
-b=SP500.index
-a = pd.Series(a)
-b = pd.Series(b)
-b.iloc[1:].values-b.iloc[:-1].values
+yearlyvol = dailyvol*np.sqrt(daybasis)
+dailyalpha = pastyears.mean() + dailyvol**2/2
+yearlyalpha = dailyalpha*daybasis
+#%% testing code
+#a=SP500.index.shift(1, 'd')
+#
+#b=SP500.index
+#a = pd.Series(a)
+#b = pd.Series(b).dt.day
+#c = b.iloc[1:].values-b.iloc[:-1].values
