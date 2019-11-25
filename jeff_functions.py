@@ -10,8 +10,9 @@ import pandas as pd
 from pandas_datareader import data
 import datetime as dt
 import os
-
+import matplotlib.pyplot as plt
 import scipy.stats as si
+#%%
 def euro_vanilla_call(S, K, T, r, sigma):
     
     #S: spot price
@@ -63,6 +64,10 @@ print(multlin_1.coef_)
 print(multlin_1.intercept_)
 print(r2_score( np.sum(multlin_1.coef_*Xs, axis = 1)+multlin_1.intercept_, c))
 
+plt.plot(K, model_1.coef_*bs_c+model_1.intercept_, '.')
+plt.plot(K, np.sum(multlin_1.coef_*Xs, axis = 1)+multlin_1.intercept_, '.')
+plt.plot(K,c, '.')
+
 #%%
 # suppose maturity = 0.5 
 bs_c2 = []
@@ -77,5 +82,7 @@ model_2 = regressor2.fit(bs_c2, c)
 
 print(model_2.coef_)
 print(model_2.intercept_)
-print(r2_score(model_2.coef_*bs_c2+model_2.intercept_, bs_c2))
+print(r2_score(model_2.coef_*bs_c2+model_2.intercept_, c))
 
+plt.plot(K, model_2.coef_*bs_c2+model_2.intercept_)
+plt.plot(K, c)
