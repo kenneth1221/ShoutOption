@@ -41,18 +41,29 @@ K = options.iloc[:, 0].values/100 # strike price
 
 # suppose maturity = 1 
 bs_c = []
+
 for i in K:
     bs_c.append(euro_vanilla_call(s, i, T_t, r, sigma))
-    
+#%%    
 bs_c = np.asarray(bs_c, dtype=np.float64).reshape(-1,1)
-
+Xs = np.hstack((bs_c, K.reshape(-1,1)))
+#%%
 from sklearn.linear_model import LinearRegression
+from sklearn.metrics import r2_score
 regressor = LinearRegression()
+regressorb = LinearRegression()
 model_1 = regressor.fit(bs_c, c)
 
 print(model_1.coef_)
 print(model_1.intercept_)
+print(r2_score(model_1.coef_*bs_c+model_1.intercept_, c))
 
+multlin_1 = regressorb.fit(Xs,c)
+print(multlin_1.coef_)
+print(multlin_1.intercept_)
+print(r2_score( np.sum(multlin_1.coef_*Xs, axis = 1)+multlin_1.intercept_, c))
+
+#%%
 # suppose maturity = 0.5 
 bs_c2 = []
 T_t = 0.5
@@ -66,3 +77,5 @@ model_2 = regressor2.fit(bs_c2, c)
 
 print(model_2.coef_)
 print(model_2.intercept_)
+print(r2_score(model_2.coef_*bs_c2+model_2.intercept_, bs_c2))
+
