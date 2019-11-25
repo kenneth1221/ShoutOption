@@ -34,7 +34,7 @@ def get_logreturn(yahoo_dataframe):
 #%%
 lreturns = get_logreturn(SP500)
 #%%
-daybasis = 252
+daybasis = 365
 n_years = 3
 pastyears = lreturns.iloc[-n_years*daybasis:]
 dailyvol = pastyears.std()
@@ -43,14 +43,16 @@ yearlyvol = dailyvol*np.sqrt(daybasis)
 dailyalpha = pastyears.mean() + dailyvol**2/2
 yearlyalpha = dailyalpha*daybasis
 #%%
-Z1 = rd.randn(10000,1)
-Z2 = rd.randn(10000,1)
+Z1 = rd.randn(100000,1)
+Z2 = rd.randn(100000,1)
 
-sigma = yearlyvol
+sigma = yearlyvol[0]
 T = 1
 trig = .5
+
 r = .0158
 d = .02
+
 S = SP500.iloc[-1].Close
 F = 10
 K = 3100
@@ -78,9 +80,9 @@ def TwoPeriodEuroCall():
 payoffs = []
 eurocall = []
 strikes = []
-minrange = 50
-maxrange = 150
-step = .01
+minrange = 2500
+maxrange = 3000
+step = .5
 #%%
 for i in np.arange(minrange,maxrange,step):
     payoffs.append(TriggerPayoff(i))
