@@ -67,7 +67,7 @@ sigma = yearlyvol
 T = 1
 trig = .5
 r = .0158
-d = .02
+d = .0185
 S = SP500.iloc[-1].Close
 F = 10
 K = 3200
@@ -103,20 +103,27 @@ def main():
     RegenerateRandomNumbers()
     payoffs = []
     eurocall = []
+    trueeurocall = []
     strikes = []
+    
     minrange = round((S+K)/2 -750)
     maxrange = round((S+K)/2 +750)
     step = .2
+    steprange = np.arange(minrange, maxrange, step)
+    
     simeurcall = TwoPeriodEuroCall()
-    bseurcall = euro_vanilla_call(S,K,T,r,sigma)
-    for i in np.arange(minrange,maxrange,step):
+    bseurcall = euro_vanilla_call(S,K,T,r,d,sigma)
+    
+    for i in steprange:
         j = TriggerPayoff(i) - simeurcall + bseurcall
         payoffs.append(j)
         eurocall.append(simeurcall)
+        trueeurocall.append(bseurcall)
         strikes.append(i)
-    plt.plot(np.arange(minrange,maxrange,step), payoffs)
-    plt.plot(np.arange(minrange,maxrange,step), eurocall)
-    print('value: ',max(payoffs), 'vanilla: ', max(eurocall), 'best Q level: ', strikes[payoffs.index(max(payoffs))])
+    plt.plot(steprange, payoffs)
+    plt.plot(steprange, eurocall)
+    plt.plot(steprange, trueeurocall)
+    print('value: ',max(payoffs), 'sim-vanilla: ', max(eurocall), 'true-vanilla: ', trueeurocall[0],'best Q level: ', strikes[payoffs.index(max(payoffs))])
 
 #%%
 main()

@@ -32,6 +32,7 @@ def euro_vanilla_call(S, K, T, r, d, sigma):
 s=so.get_latest_price()
 T_t = 1
 r = 0.0158
+d = 0.0185
 sigma = so.get_sigma()
 #%%
 os.chdir(os.path.dirname(__file__))
@@ -48,7 +49,7 @@ K = options.loc[:, 'strike'].values/100 # strike price
 bs_c = []
 
 for i in K:
-    bs_c.append(euro_vanilla_call(s, i, T_t, r, sigma))
+    bs_c.append(euro_vanilla_call(s, i, T_t, r, d,sigma))
 #%%    
 bs_c = np.asarray(bs_c, dtype=np.float64).reshape(-1,1)
 Xs = np.hstack((bs_c, K.reshape(-1,1)))
@@ -77,7 +78,7 @@ plt.plot(K,c1yr, '.')
 bs_c2 = []
 T_t = 0.5
 for i in K:
-    bs_c2.append(euro_vanilla_call(s, i, T_t, r, sigma))
+    bs_c2.append(euro_vanilla_call(s, i, T_t, r, d,sigma))
     
 bs_c2 = np.asarray(bs_c2, dtype=np.float64).reshape(-1,1)
 
