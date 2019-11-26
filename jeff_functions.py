@@ -15,17 +15,17 @@ import scipy.stats as si
 
 import ShoutOption as so;
 #%%
-def euro_vanilla_call(S, K, T, r, sigma):
+def euro_vanilla_call(S, K, T, r, d, sigma):
     
     #S: spot price
     #K: strike price
     #T: time to maturity
     #r: interest rate
     #sigma: volatility of underlying asset
-    d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
-    d2 = (np.log(S / K) + (r - 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
+    d1 = (np.log(S / K) + (r - d + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
+    d2 = (np.log(S / K) + (r - d - 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
     
-    call = (S * si.norm.cdf(d1, 0.0, 1.0) - K * np.exp(-r * T) * si.norm.cdf(d2, 0.0, 1.0))
+    call = (S * si.norm.cdf(d1, 0.0, 1.0) - K * np.exp(-(r-d) * T) * si.norm.cdf(d2, 0.0, 1.0))
     
     return call
 

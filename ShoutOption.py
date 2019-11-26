@@ -11,6 +11,7 @@ from pandas_datareader import data
 import datetime as dt
 import numpy.random as rd
 import matplotlib.pyplot as plt
+from jeff_functions import euro_vanilla_call
 #%%
 def load_financial_data(name, output_file):
     try:
@@ -68,7 +69,7 @@ trig = .5
 r = .0158
 d = .02
 S = SP500.iloc[-1].Close
-F = 100
+F = 10
 K = 3200
 
 def TriggerPayoff(Q):
@@ -94,6 +95,7 @@ def RegenerateRandomNumbers():
     global Z1, Z2
     Z1 = rd.randn(20000,1)
     Z2 = rd.randn(20000,1)
+    #control variate method
     Z1 = (Z1-Z1.mean())/Z1.std()
     Z2 = (Z2-Z2.mean())/Z2.std()
 #%%
@@ -102,12 +104,15 @@ def main():
     payoffs = []
     eurocall = []
     strikes = []
-    minrange = (S+K)/2 -750
-    maxrange = (S+K)/2 +750
-    step = .5
+    minrange = round((S+K)/2 -750)
+    maxrange = round((S+K)/2 +750)
+    step = .2
+    simeurcall = TwoPeriodEuroCall()
+    bseurcall = euro_vanilla_call(S,K,T,r,sigma)
     for i in np.arange(minrange,maxrange,step):
-        payoffs.append(TriggerPayoff(i))
-        eurocall.append(TwoPeriodEuroCall())
+        j = TriggerPayoff(i) - simeurcall + bseurcall
+        payoffs.append(j)
+        eurocall.append(simeurcall)
         strikes.append(i)
     plt.plot(np.arange(minrange,maxrange,step), payoffs)
     plt.plot(np.arange(minrange,maxrange,step), eurocall)
