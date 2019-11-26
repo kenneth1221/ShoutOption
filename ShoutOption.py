@@ -99,7 +99,7 @@ def RegenerateRandomNumbers():
     Z1 = (Z1-Z1.mean())/Z1.std()
     Z2 = (Z2-Z2.mean())/Z2.std()
 #%%
-def main():
+def main(k):
     sigma = yearlyvol
     T = 1
     trig = .5
@@ -107,7 +107,7 @@ def main():
     d = .0185
     S = SP500.iloc[-1].Close
     F = 10
-    K = 3200
+    K = k
     RegenerateRandomNumbers()
     payoffs = []
     eurocall = []
@@ -123,6 +123,12 @@ def main():
     bseurcall = euro_vanilla_call(S,K,T,r,d,sigma)
     
     for i in steprange:
+        # this payoff takes the control variate technique and applies it to the trigger payoff
+        # we know what the analytical european call price should be
+        # we can simulate the european call price using the same common random numbers as the trigger
+        # thus, we can correct the effect of the randomnuess on the trigger payoff via:
+        # simulated_trigger - simulated_european + analytical_european
+        
         j = TriggerPayoff(i) - simeurcall + bseurcall
         payoffs.append(j)
         eurocall.append(simeurcall)
@@ -140,7 +146,7 @@ def main():
 #values = []
 #optimalqs = []
 #for j in range(10):        
-#    v, q = main()
+#    v, q = main(k)
 #    values.append(v)
 #    optimalqs.append(q)
 #%%
