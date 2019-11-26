@@ -100,6 +100,14 @@ def RegenerateRandomNumbers():
     Z2 = (Z2-Z2.mean())/Z2.std()
 #%%
 def main():
+    sigma = yearlyvol
+    T = 1
+    trig = .5
+    r = .0158
+    d = .0185
+    S = SP500.iloc[-1].Close
+    F = 10
+    K = 3200
     RegenerateRandomNumbers()
     payoffs = []
     eurocall = []
@@ -123,10 +131,22 @@ def main():
     plt.plot(steprange, payoffs)
     plt.plot(steprange, eurocall)
     plt.plot(steprange, trueeurocall)
-    print('value: ',max(payoffs), 'sim-vanilla: ', max(eurocall), 'true-vanilla: ', trueeurocall[0],'best Q level: ', strikes[payoffs.index(max(payoffs))])
+    bestq = strikes[payoffs.index(max(payoffs))]
+    value = max(payoffs)
+    print('value: ',value, 'sim-vanilla: ', max(eurocall), 'true-vanilla: ', trueeurocall[0],'best Q level: ', bestq)
+    return value, bestq
 
 #%%
-main()
+#values = []
+#optimalqs = []
+#for j in range(10):        
+#    v, q = main()
+#    values.append(v)
+#    optimalqs.append(q)
+#%%
+
+#values = np.array(values)
+#optimalqs = np.array(optimalqs)
 #%% testing code
 #a=SP500.index.shift(1, 'd')
 #

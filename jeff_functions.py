@@ -73,6 +73,7 @@ plt.plot(K, model_1.coef_*bs_c+model_1.intercept_, '.')
 plt.plot(K, np.sum(multlin_1.coef_*Xs, axis = 1)+multlin_1.intercept_, '.')
 plt.plot(K,c1yr, '.')
 
+
 #%%
 # suppose maturity = 0.5 
 bs_c2 = []
