@@ -19,7 +19,7 @@ def euro_vanilla_call(S, K, T, r, d, sigma):
     
     #S: spot price
     #K: strike price
-    #T: time to maturity
+    #T: time to maturity/
     #r: interest rate
     #sigma: volatility of underlying asset
     d1 = (np.log(S / K) + (r - d + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
@@ -28,7 +28,7 @@ def euro_vanilla_call(S, K, T, r, d, sigma):
     call = (S * si.norm.cdf(d1, 0.0, 1.0) - K * np.exp(-(r-d) * T) * si.norm.cdf(d2, 0.0, 1.0))
     
     return call
-
+#%%
 s=so.get_latest_price()
 T_t = 1
 r = 0.0158
@@ -52,16 +52,21 @@ for i in K:
     bs_c.append(euro_vanilla_call(s, i, T_t, r, d,sigma))
 #%%    
 bs_c = np.asarray(bs_c, dtype=np.float64).reshape(-1,1)
+#Xs is a matrix of theoretical black scholes price and strike. 
 Xs = np.hstack((bs_c, K.reshape(-1,1)))
 #%%
+
+#linear regression to connect the black scholes call price to the 1 year call price
+# establishes a link between the theoretical black scholes and market observed prices
+# so, using a given result from the black scholes formula, we can fill in the blanks for what the market would say
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 regressor = LinearRegression()
 regressorb = LinearRegression()
 model_1 = regressor.fit(bs_c, c1yr)
 
-print(model_1.coef_)
-print(model_1.intercept_)
+print('slope: ',model_1.coef_)
+print('intercept: ',model_1.intercept_)
 print(r2_score(model_1.coef_*bs_c+model_1.intercept_, c1yr))
 
 multlin_1 = regressorb.fit(Xs,c1yr)
@@ -76,6 +81,8 @@ plt.plot(K,c1yr, '.')
 
 #%%
 # suppose maturity = 0.5 
+# regresses half year black scholes theoretical call price to real call price
+
 bs_c2 = []
 T_t = 0.5
 for i in K:
