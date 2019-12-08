@@ -77,7 +77,7 @@ yearlyalpha = dailyalpha*daybasis
 
 #%%
 # generate  set of random numbers
-num_random = 5000
+num_random = 10000
 Z1 = rd.randn(num_random,1)
 Z2 = rd.randn(num_random,1)
 Z1 = (Z1-Z1.mean())/Z1.std()
@@ -90,12 +90,19 @@ def RegenerateRandomNumbers():
     Z1 = (Z1-Z1.mean())/Z1.std()
     Z2 = (Z2-Z2.mean())/Z2.std()
     
+    
+def SimulateStock(S0,t, Z):
+    Sn = S0*np.exp(( r - d - sigma**2/2)*trig + sigma*Z * np.sqrt(t))
+    return Sn
+    
 def TriggerPayoff(Q, F):
     """ calculates trigger payoff for a given exercise level Q via Monte Carlo simulation"""
     
-    Shalf = S*np.exp( ( r - d - sigma**2/2)*trig + sigma*Z1 * np.sqrt(trig)) 
+    Shalf = SimulateStock(S,trig, Z1)
+#    Shalf = S*np.exp( ( r - d - sigma**2/2)*trig + sigma*Z1 * np.sqrt(trig)) 
     
-    S1 = Shalf*np.exp( ( r - d - sigma**2/2)*(T-trig) + sigma*Z2 * np.sqrt(T-trig)) 
+#    S1 = Shalf*np.exp( ( r - d - sigma**2/2)*(T-trig) + sigma*Z2 * np.sqrt(T-trig)) 
+    S1 = SimulateStock(Shalf, T-trig, Z2)
     
     Payoff = np.maximum(S1-K, 0)
     Payoff[Shalf < Q] = F
@@ -103,6 +110,11 @@ def TriggerPayoff(Q, F):
 #    return np.hstack((Shalf, Payoff))
     return meanPayoff*np.exp(-r*T)
 
+def HalfYearCall():
+    Shalf = S*np.exp( ( r - d - sigma**2/2)*trig + sigma*Z1 * np.sqrt(trig)) 
+    Payoff = np.maximum(Shalf-K,0)
+    return np.mean(Payoff)*np.exp(-r*T)
+     
 #theoretically, at T=.5, the option is either an option to get a fixed payment or a call.
 def TwoPeriodEuroCall():
     """calculates the value of a vanilla european call using common random numbers of the shout option"""
@@ -195,6 +207,14 @@ plt.plot(Ks, chalfyr, '.')
 # how do we benchmark this? mentally I'm stuck
 # information we have: simulated half year stock prices, full year stock prices
 # market data: half year option, full year option
+# option one: multilinear regression, monte carlo half year to known option price, full year to known option
+
+# wait: what's the x data and y? the y is the simulated shout option price.
+# the xs are therefore some combination of the simulated stock prices and the known real option prices
+# so for each loop: simulate a shout price, as well as the two stock prices at each time
+# then do the regression on the value of the OPTION at time .5 and time 1
+# shout = a + b1 * option.5 + b2*option1
+# then, we use the actual values of the options at .5 and 1 to get the 'actual value' of the shout??
 print(a_year, b_year, a_half, b_half)
 
 def scaled_eurocall(bsprice, alpha, beta):
@@ -204,11 +224,13 @@ def scaled_eurocall(bsprice, alpha, beta):
 def main(k):
     sigma = yearlyvol
     T = 1
-    trig = .5
     r = .0158
     d = .0185
     S = SP500.iloc[-1].Close
     F = 100 #we want some F that makes the shout more valuable than the vanilla
+#    F = 0 #dummy to check convergence to vanilla
+    # when this F=0 condition is true, we would expect the value to be identical to vanilla.
+    
     K = k
     RegenerateRandomNumbers()
     payoffs = []
@@ -222,8 +244,11 @@ def main(k):
     step = .2
     steprange = np.arange(minrange, maxrange, step)
     
-    simeurcall = scaled_eurocall(TwoPeriodEuroCall(),a_year, b_year )#common random number eurocall
-    bseurcall = scaled_eurocall(euro_vanilla_call(S,K,T,r,d,sigma), a_year, b_year )#analytical eurocall
+    simeurcall = TwoPeriodEuroCall()#common random number eurocall
+    simhalfcall = HalfYearCall()
+    
+    bseurcall = scaled_eurocall(euro_vanilla_call(S,K,T,r,d,sigma), a_year, b_year )
+    #analytical eurocall, scaled to market data
     
     for i in steprange:
         # this payoff takes the control variate technique and applies it to the trigger payoff
@@ -234,7 +259,7 @@ def main(k):
         basepay = TriggerPayoff(i,F)
 
         j = basepay - simeurcall + bseurcall
-        
+        # I have no idea of this use of control variate is compatible with benchmarking
         
         payoffs.append(j)
         basepays.append(basepay)
@@ -246,21 +271,28 @@ def main(k):
     plt.plot(steprange, trueeurocall)
     bestq = strikes[payoffs.index(max(payoffs))]
     value = max(payoffs)
-    print('value: ',value, 'sim-vanilla: ', max(eurocall), 'true-vanilla: ', trueeurocall[0],'best Q level: ', bestq)
+    print('value: ',value, 
+          'true-vanilla: ', trueeurocall[0], 
+          '\n',
+          'unadj value', max(basepays),
+          'sim-vanilla: ', max(eurocall), 
+          '\n',
+          'best Q level: ', bestq)
     return value, bestq
 
 #%%
-k = 3150
+k = 3120
 values = []
 optimalqs = []
-for j in range(5):        
+for j in range(10):        
     v, q = main(k)
     values.append(v)
     optimalqs.append(q)
 #%%
 
-#values = np.array(values)
-#optimalqs = np.array(optimalqs)
+values = np.array(values)
+optimalqs = np.array(optimalqs)
+values.mean(), values.std(), optimalqs.mean(), optimalqs.std()
 #%% testing code
 #a=SP500.index.shift(1, 'd')
 #
