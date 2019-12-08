@@ -238,7 +238,7 @@ def scaled_eurocall(bsprice, alpha, beta):
     return bsprice*beta + alpha
     
 #%%
-placekey = 4
+placekey = 5
 k = Ks[placekey]
 K = k
 minrange = round((S+K)/2 -750)
@@ -384,6 +384,11 @@ print(stats_bm)
 spread_prices = np.array(benchmark_prices(regression_results_spread))
 stats_spread = (spread_prices.mean(), spread_prices.std())
 print(stats_spread)
+print(stats_spread[0]-stats_bm[0])
+#%%
+print(optimalqs_base.mean(),np.mean(optimalqs_spread))
+# indicates that as vol rises optimal exercise boundary falls
+print(np.std(optimalqs_base), np.std(optimalqs_spread))
 #%% testing code
 #a=SP500.index.shift(1, 'd')
 #
