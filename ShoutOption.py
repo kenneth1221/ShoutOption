@@ -77,7 +77,7 @@ yearlyalpha = dailyalpha*daybasis
 
 #%%
 # generate  set of random numbers
-num_random = 5000
+num_random = 10000
 def RegenerateRandomNumbers():
     global Z1, Z2
     Z1 = rd.randn(num_random,1)
@@ -88,11 +88,11 @@ def RegenerateRandomNumbers():
 
 RegenerateRandomNumbers();
     
-def SimulateStock(S0,t, Z):
+def SimulateStock(S0,t, sigma, Z):
     Sn = S0*np.exp(( r - d - sigma**2/2)*t + sigma*Z * np.sqrt(t))
     return Sn
 
-def SimulateAllRelevantStocks(S0, t, T, Z1, Z2):
+def SimulateAllRelevantStocks(S0, t, T, sigma, Z1, Z2):
     Shalf = S0*np.exp(( r - d - sigma**2/2)*t + sigma*Z1* np.sqrt(t))
     S1 = Shalf*np.exp( ( r - d - sigma**2/2)*(T-t) + sigma*Z2 * np.sqrt(T-t)) 
     return Shalf, S1
@@ -148,7 +148,7 @@ r = .0158
 d = .0185
 S = SP500.iloc[-1].Close
 F = 10
-K = 3150
+#K = 3150
 
 #%% reads option data
 options = pd.read_excel("options.xlsx")
@@ -238,13 +238,16 @@ def scaled_eurocall(bsprice, alpha, beta):
     return bsprice*beta + alpha
     
 #%%
-
+placekey = 4
+k = Ks[placekey]
+K = k
 minrange = round((S+K)/2 -750)
 maxrange = round((S+K)/2 +750)
 step = .1
 steprange = np.arange(minrange, maxrange, step)
-def main(k, sigma):
-    sigma = sigma
+
+def estimate_prices(k, sigma_):
+
     T = 1
     trig = .5
     r = .0158
@@ -255,19 +258,19 @@ def main(k, sigma):
     # when this F=0 condition is true, we would expect the value to be identical to vanilla.
     
     K = k
-    RegenerateRandomNumbers()
+
     payoffs = []
     basepays = []
     eurocall = []
     trueeurocall = []
     strikes = []
     
-    Shalf, S1 = SimulateAllRelevantStocks(S, trig, T, Z1, Z2)
+    Shalf, S1 = SimulateAllRelevantStocks(S, trig, T, sigma_, Z1, Z2)
     
     simeurcall = TwoPeriodEuroPayoff(S1) #common random number eurocall
     
     
-    bseurcall = scaled_eurocall(euro_vanilla_call(S,K,T,r,d,sigma), a_year, b_year )
+    bseurcall = scaled_eurocall(euro_vanilla_call(S,K,T,r,d,sigma_), a_year, b_year )
     #analytical eurocall, scaled to market data
     
     for i in steprange:
@@ -319,45 +322,68 @@ def main(k, sigma):
     return value, bestq, model, payoffs
 
 #%%
+def benchmark_prices(reg_results):
+    c1 = c1yr[placekey]
+    ch = chalfyr[placekey]
+    benchmarkcalls = np.array((ch, c1))
+    benchmarkedprices = []
+    for reg in reg_results:
+    #    price = reg.coef_[0]*ch + reg.coef_[1]*c1 + reg.intercept_
+        price = (np.dot(reg.coef_,benchmarkcalls) + reg.intercept_)[0]
+        # can also use reg.predict()
+#        print(reg.coef_, reg.intercept_)
+        benchmarkedprices.append(price)
+    return benchmarkedprices
 #k = 3120
 # referential equivalent for k = 3120:
-placekey = 4
-k = Ks[placekey]
-values = []
-optimalqs = []
-regression_results = []
-payofflist = []
+#placekey = 4
+#k = Ks[placekey]
+#
+#minrange = round((S+K)/2 -750)
+#maxrange = round((S+K)/2 +750)
+#step = .2
+#steprange = np.arange(minrange, maxrange, step)
 
-minrange = round((S+K)/2 -750)
-maxrange = round((S+K)/2 +750)
-step = .2
-steprange = np.arange(minrange, maxrange, step)
+values_base = []
+optimalqs_base = []
+regression_results_base = []
+payofflist_base = []
+
+values_spread = []
+optimalqs_spread = []
+regression_results_spread = []
+payofflist_spread = []
 
 for j in range(20):        
-    v, q, rr, ps = main(k, yearlyvol)
-    values.append(v)
-    optimalqs.append(q)
-    regression_results.append(rr)
-    payofflist.append(ps)
+    RegenerateRandomNumbers()
+    
+    v, q, rr, ps = estimate_prices(k, yearlyvol)
+    values_base.append(v)
+    optimalqs_base.append(q)
+    regression_results_base.append(rr)
+    payofflist_base.append(ps)
+    
+    v, q, rr, ps = estimate_prices(k, yearlyvol + .03)
+    values_spread.append(v)
+    optimalqs_spread.append(q)
+    regression_results_spread.append(rr)
+    payofflist_spread.append(ps)
 
-for payoffs in payofflist:
+for payoffs in payofflist_base:
     plt.plot(steprange, payoffs)
-#%%
-c1 = c1yr[placekey]
-ch = chalfyr[placekey]
-benchmarkcalls = np.array((ch, c1))
-benchmarkedprices = []
-for reg in regression_results:
-#    price = reg.coef_[0]*ch + reg.coef_[1]*c1 + reg.intercept_
-    price = (np.dot(reg.coef_,benchmarkcalls) + reg.intercept_)[0]
-    print(reg.coef_, reg.intercept_)
-    benchmarkedprices.append(price)
 
-
-values = np.array(values)
-optimalqs = np.array(optimalqs)
-prices = np.array(benchmarkedprices)
-values.mean(), values.std(), prices.mean(), prices.std(), optimalqs.mean(), optimalqs.std()
+for payoffs in payofflist_spread:
+    plt.plot(steprange, payoffs)
+values_base = np.array(values_base)
+optimalqs_base = np.array(optimalqs_base)
+prices = np.array(benchmark_prices(regression_results_base))
+#values.mean(), values.std(), prices.mean(), prices.std(), optimalqs.mean(), optimalqs.std()
+stats_bm = (prices.mean(), prices.std())
+print(stats_bm)
+   
+spread_prices = np.array(benchmark_prices(regression_results_spread))
+stats_spread = (spread_prices.mean(), spread_prices.std())
+print(stats_spread)
 #%% testing code
 #a=SP500.index.shift(1, 'd')
 #
