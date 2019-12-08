@@ -78,18 +78,15 @@ yearlyalpha = dailyalpha*daybasis
 #%%
 # generate  set of random numbers
 num_random = 10000
-Z1 = rd.randn(num_random,1)
-Z2 = rd.randn(num_random,1)
-Z1 = (Z1-Z1.mean())/Z1.std()
-Z2 = (Z2-Z2.mean())/Z2.std()
 def RegenerateRandomNumbers():
     global Z1, Z2
     Z1 = rd.randn(num_random,1)
     Z2 = rd.randn(num_random,1)
-    #control variate method
+    #control variate method, denorming Z1 and Z2
     Z1 = (Z1-Z1.mean())/Z1.std()
     Z2 = (Z2-Z2.mean())/Z2.std()
-    
+
+RegenerateRandomNumbers();
     
 def SimulateStock(S0,t, Z):
     Sn = S0*np.exp(( r - d - sigma**2/2)*trig + sigma*Z * np.sqrt(t))
@@ -106,14 +103,22 @@ def TriggerPayoff(Q, F):
     
     Payoff = np.maximum(S1-K, 0)
     Payoff[Shalf < Q] = F
-    meanPayoff = np.mean(Payoff)
+#    meanPayoff = np.smean(Payoff)
 #    return np.hstack((Shalf, Payoff))
-    return meanPayoff*np.exp(-r*T)
+#    return meanPayoff*np.exp(-r*T)
+    return Payoff
+
+def TriggerMeanPayoff(Q,F):
+    return np.mean(TriggerPayoff(Q,F))*np.exp(-r*T)
 
 def HalfYearCall():
     Shalf = S*np.exp( ( r - d - sigma**2/2)*trig + sigma*Z1 * np.sqrt(trig)) 
     Payoff = np.maximum(Shalf-K,0)
-    return np.mean(Payoff)*np.exp(-r*T)
+#    return np.mean(Payoff)*np.exp(-r*T)
+    return Payoff
+
+def HalfYearPayoff():
+    return np.mean(HalfYearCall())*np.exp(-r*T)
      
 #theoretically, at T=.5, the option is either an option to get a fixed payment or a call.
 def TwoPeriodEuroCall():
@@ -121,7 +126,11 @@ def TwoPeriodEuroCall():
     Shalf = S*np.exp( ( r - d - sigma**2/2)*trig + sigma*Z1 * np.sqrt(trig)) 
     S1 = Shalf*np.exp( ( r - d - sigma**2/2)*(T-trig) + sigma*Z2 * np.sqrt(T-trig))
     Payoff = np.maximum(S1-K,0)
-    return np.mean(Payoff)*np.exp(-r*T)
+#    return np.mean(Payoff)*np.exp(-r*T)
+    return Payoff
+
+def TwoPeriodEuroPayoff():
+    return np.mean(TwoPeriodEuroCall())*np.exp(-r*T)
 
 #%% sets parameters
 sigma = yearlyvol
@@ -244,8 +253,8 @@ def main(k):
     step = .2
     steprange = np.arange(minrange, maxrange, step)
     
-    simeurcall = TwoPeriodEuroCall()#common random number eurocall
-    simhalfcall = HalfYearCall()
+    simeurcall = TwoPeriodEuroPayoff() #common random number eurocall
+    
     
     bseurcall = scaled_eurocall(euro_vanilla_call(S,K,T,r,d,sigma), a_year, b_year )
     #analytical eurocall, scaled to market data
@@ -256,20 +265,36 @@ def main(k):
         # we can simulate the european call price using the same common random numbers as the trigger
         # thus, we can correct the effect of the randomnuess on the trigger payoff via:
         # simulated_trigger - simulated_european + analytical_european
-        basepay = TriggerPayoff(i,F)
+        basepay = TriggerMeanPayoff(i,F)
 
         j = basepay - simeurcall + bseurcall
         # I have no idea of this use of control variate is compatible with benchmarking
+        # but strictly speaking this is perfectly valid
+        #alright, this is valid in the formulation that returns average payoffs
         
         payoffs.append(j)
         basepays.append(basepay)
+        
+        # these are done to display a straight line of call price
         eurocall.append(simeurcall)
         trueeurocall.append(bseurcall)
+        
+        #this is necessary for best q level
         strikes.append(i)
+    
     plt.plot(steprange, payoffs)
-    plt.plot(steprange, eurocall)
+#    plt.plot(steprange, eurocall)
     plt.plot(steprange, trueeurocall)
+    
     bestq = strikes[payoffs.index(max(payoffs))]
+    
+    trigger = TriggerPayoff(bestq, F)
+    
+    Xs = np.hstack((HalfYearCall(), TwoPeriodEuroCall()))
+    
+    regressor = LinearRegression()
+    model = regressor.fit(Xs, trigger)
+    
     value = max(payoffs)
     print('value: ',value, 
           'true-vanilla: ', trueeurocall[0], 
@@ -278,21 +303,37 @@ def main(k):
           'sim-vanilla: ', max(eurocall), 
           '\n',
           'best Q level: ', bestq)
-    return value, bestq
+    return value, bestq, model
 
 #%%
-k = 3120
+#k = 3120
+# referential equivalent for k = 3120:
+placekey = 4
+k = Ks[placekey]
 values = []
 optimalqs = []
+regression_results = []
 for j in range(10):        
-    v, q = main(k)
+    v, q, rr = main(k)
     values.append(v)
     optimalqs.append(q)
+    regression_results.append(rr)
 #%%
+c1 = c1yr[placekey]
+ch = chalfyr[placekey]
+benchmarkcalls = np.array((ch, c1))
+benchmarkedprices = []
+for reg in regression_results:
+#    price = reg.coef_[0]*ch + reg.coef_[1]*c1 + reg.intercept_
+    price = (np.dot(reg.coef_,benchmarkcalls) + reg.intercept_)[0]
+    print(reg.coef_, reg.intercept_)
+    benchmarkedprices.append(price)
+
 
 values = np.array(values)
 optimalqs = np.array(optimalqs)
-values.mean(), values.std(), optimalqs.mean(), optimalqs.std()
+prices = np.array(benchmarkedprices)
+values.mean(), values.std(), prices.mean(), prices.std(), optimalqs.mean(), optimalqs.std()
 #%% testing code
 #a=SP500.index.shift(1, 'd')
 #
