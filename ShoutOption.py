@@ -103,6 +103,7 @@ def TriggerPayoff(Q, F):
 #    return np.hstack((Shalf, Payoff))
     return meanPayoff*np.exp(-r*T)
 
+#theoretically, at T=.5, the option is either an option to get a fixed payment or a call.
 def TwoPeriodEuroCall():
     """calculates the value of a vanilla european call using common random numbers of the shout option"""
     Shalf = S*np.exp( ( r - d - sigma**2/2)*trig + sigma*Z1 * np.sqrt(trig)) 
@@ -189,6 +190,11 @@ plt.plot(Ks, chalfyr, '.')
 # xs are then... 
 # I guess it could be with different strike prices to empirically determine a payoff function for a shout
 # theoretically with a shout F of 0, the damn thing should converge to a european call
+# anyways, what we want is an equation of form a + b1 O1 + b2 O2,
+# where a is a fixed cost, b1 is the relation to the half year option, and b2 is the relation to the year option
+# how do we benchmark this? mentally I'm stuck
+# information we have: simulated half year stock prices, full year stock prices
+# market data: half year option, full year option
 print(a_year, b_year, a_half, b_half)
 
 def scaled_eurocall(bsprice, alpha, beta):
@@ -202,7 +208,7 @@ def main(k):
     r = .0158
     d = .0185
     S = SP500.iloc[-1].Close
-    F = 100
+    F = 100 #we want some F that makes the shout more valuable than the vanilla
     K = k
     RegenerateRandomNumbers()
     payoffs = []
@@ -228,6 +234,8 @@ def main(k):
         basepay = TriggerPayoff(i,F)
 
         j = basepay - simeurcall + bseurcall
+        
+        
         payoffs.append(j)
         basepays.append(basepay)
         eurocall.append(simeurcall)
@@ -242,7 +250,7 @@ def main(k):
     return value, bestq
 
 #%%
-k = 3100
+k = 3150
 values = []
 optimalqs = []
 for j in range(5):        
