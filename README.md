@@ -3,6 +3,8 @@ A simulated shout option calibrated on data from the S&P500
 
 For Valuation at NYU Tandon School of Engineering.
 
+Full write-up of results and conclusion is in Shout_Option_Valuation_Project.pdf.
+
 ## Assignment parameters:
 "You will assume the role of an exotic equity derivatives analyst, price the shout option, determine the optimal exercise strategy, and provide traders instructions on how to best hedge the shout option using traded options.  Finally, you will prepare a profitability and risk assessment for management.  A complete day in the life of a desk quant!"
 
